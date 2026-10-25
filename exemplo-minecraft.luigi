@@ -1,0 +1,142 @@
+// MINECRAFT EM LUIGI
+// WASD andar | mouse olhar (clique para travar) | ESPACO pular
+// botao esquerdo quebra | botao direito coloca | teclas 1 a 6 trocam o bloco
+
+/ceu/ "#87ceeb" /
+/resolucao/ 5 /
+
+/funcao/ terreno(x, z) /
+    /retornar/ 8 + piso(seno(x * 12) * 2 + seno(z * 9) * 2 + seno((x + z) * 6)) /
+/fim/ /
+
+// gera o mundo
+/para/ x de 0 ate 63 /
+    /para/ z de 0 ate 63 /
+        /var/ h = terreno(x, z) /
+        /preencher/ x, 0, z, x, h - 3, z, "#9e9e9e" /
+        /preencher/ x, h - 2, z, x, h - 1, z, "#8d6e63" /
+        /bloco/ x, h, z, "#4caf50" /
+    /fim/ /
+/fim/ /
+
+// arvores
+/repetir/ 25 /
+    /var/ ax = aleatorio(4, 59) /
+    /var/ az = aleatorio(4, 59) /
+    /var/ ah = terreno(ax, az) /
+    /preencher/ ax, ah + 1, az, ax, ah + 4, az, "#6d4c41" /
+    /preencher/ ax - 2, ah + 4, az - 2, ax + 2, ah + 5, az + 2, "#2e7d32" /
+    /preencher/ ax - 1, ah + 6, az - 1, ax + 1, ah + 6, az + 1, "#388e3c" /
+/fim/ /
+
+/var/ cores = ["#4caf50", "#8d6e63", "#9e9e9e", "#ffeb3b", "#f44336", "#ffffff"] /
+/var/ sel = 0 /
+/var/ px = 32.5 /
+/var/ pz = 32.5 /
+/var/ py = terreno(32, 32) + 3 /
+/var/ vy = 0 /
+/var/ giro = 0 /
+/var/ inc = 0 /
+/var/ noChao = falso /
+
+/funcao/ solido(x, y, z) /
+    /retornar/ bloco(x, y, z) != "ar" /
+/fim/ /
+
+/funcao/ parede(x, y, z) /
+    /retornar/ solido(x, y - 1.4, z) ou solido(x, y - 0.4, z) ou solido(x, y + 0.1, z) /
+/fim/ /
+
+/sempre/ /
+    // olhar com o mouse
+    /var/ giro += mouseDX * 0.15 /
+    /var/ inc = maximo(-89, minimo(89, inc - mouseDY * 0.15)) /
+
+    // andar
+    /var/ mx = 0 /
+    /var/ mz = 0 /
+    /se/ tecla("w") /
+        /var/ mx += seno(giro) /
+        /var/ mz += cosseno(giro) /
+    /fim/ /
+    /se/ tecla("s") /
+        /var/ mx -= seno(giro) /
+        /var/ mz -= cosseno(giro) /
+    /fim/ /
+    /se/ tecla("d") /
+        /var/ mx += cosseno(giro) /
+        /var/ mz -= seno(giro) /
+    /fim/ /
+    /se/ tecla("a") /
+        /var/ mx -= cosseno(giro) /
+        /var/ mz += seno(giro) /
+    /fim/ /
+    /var/ nx = px + mx * 4.5 * dt /
+    /se/ nao parede(nx, py, pz) /
+        /var/ px = nx /
+    /fim/ /
+    /var/ nz = pz + mz * 4.5 * dt /
+    /se/ nao parede(px, py, nz) /
+        /var/ pz = nz /
+    /fim/ /
+
+    // pular e gravidade
+    /se/ apertou("espaco") e noChao /
+        /var/ vy = 8 /
+    /fim/ /
+    /var/ vy -= 22 * dt /
+    /var/ ny = py + vy * dt /
+    /var/ noChao = falso /
+    /se/ vy < 0 /
+        /se/ solido(px, ny - 1.6, pz) /
+            /var/ py = piso(ny - 1.6) + 1 + 1.6 /
+            /var/ vy = 0 /
+            /var/ noChao = verdadeiro /
+        /senao/ /
+            /var/ py = ny /
+        /fim/ /
+    /senao/ /
+        /se/ solido(px, ny + 0.2, pz) /
+            /var/ vy = 0 /
+        /senao/ /
+            /var/ py = ny /
+        /fim/ /
+    /fim/ /
+    /se/ py < -20 /
+        /var/ py = 30 /
+        /var/ vy = 0 /
+    /fim/ /
+
+    // escolher bloco
+    /para/ k de 0 ate 5 /
+        /se/ apertou(texto(k + 1)) /
+            /var/ sel = k /
+        /fim/ /
+    /fim/ /
+
+    // quebrar e colocar
+    /camera/ px, py, pz, giro, inc /
+    /var/ alvo = olhar() /
+    /se/ alvo.achou /
+        /se/ clicouEsq /
+            /bloco/ alvo.x, alvo.y, alvo.z, "ar" /
+        /fim/ /
+        /se/ clicouDir /
+            /var/ dentro = piso(px) == alvo.ax e piso(pz) == alvo.az e (piso(py - 1.4) == alvo.ay ou piso(py - 0.4) == alvo.ay) /
+            /se/ nao dentro /
+                /bloco/ alvo.ax, alvo.ay, alvo.az, cores[sel] /
+            /fim/ /
+        /fim/ /
+    /fim/ /
+
+    /desenhar3d/ /
+
+    // mira e informacoes
+    /cor/ "white" /
+    /linha/ largura / 2 - 9, altura / 2, largura / 2 + 9, altura / 2 /
+    /linha/ largura / 2, altura / 2 - 9, largura / 2, altura / 2 + 9 /
+    /cor/ cores[sel] /
+    /retangulo/ 12, altura - 44, 32, 32 /
+    /cor/ "white" /
+    /escrever/ "WASD andar | ESPACO pular | esq quebrar | dir colocar | 1-6 bloco", 54, altura - 38, 18 /
+/fim/ /
